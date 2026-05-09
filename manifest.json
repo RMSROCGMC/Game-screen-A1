@@ -6,5 +6,11 @@
   "orientation": "landscape",
   "background_color": "#0033ad",
   "theme_color": "#0033ad",
-  "icons": [{ "src": "logo.jpeg", "sizes": "512x512", "type": "image/jpeg" }]
+  "icons": [
+    {
+      "src": "logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
 }
