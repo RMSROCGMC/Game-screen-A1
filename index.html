@@ -3,34 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>歷史決戰：帝君對決大總統</title>
+    <title>歷史決戰：代碼繪製版</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: sans-serif; color: white; user-select: none; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', sans-serif; color: white; user-select: none; }
         
-        /* 加載畫面 */
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
-        #loading-bar-container { width: 60%; height: 15px; background: #333; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 1px solid #fff; }
-        #loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #e74c3c, #f1c40f); transition: width 0.1s; }
-        
-        /* 登入與選單容器 */
-        #ui-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 9999; justify-content: center; align-items: center; }
-        #menu-bg { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background-image: url('1778345687994.png'); 
-            background-size: contain; background-repeat: no-repeat; background-position: center; z-index: -1; 
+        /* 1. 加載畫面 - 使用 CSS 動態漸層 */
+        #loading-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle, #2c3e50, #000); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; 
+        }
+        #loading-logo {
+            width: 100px; height: 100px; background: #e74c3c; border-radius: 20%;
+            margin-bottom: 30px; animation: pulse 1.5s infinite;
+            border: 4px solid #f1c40f;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0px #f1c40f; }
+            50% { transform: scale(1.1); box-shadow: 0 0 20px #f1c40f; }
+            100% { transform: scale(1); box-shadow: 0 0 0px #f1c40f; }
+        }
+        #loading-bar-container { width: 60%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+        #loading-bar { width: 0%; height: 100%; background: #f1c40f; transition: width 0.1s; }
+
+        /* 2. 主選單 - 代替原本的大合照 */
+        #ui-container { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            display: none; z-index: 9999; justify-content: center; align-items: center; 
+            background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+        }
+        #menu-art-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3;
+            background-image: repeating-linear-gradient(45deg, #34495e 25%, transparent 25%, transparent 75%, #34495e 75%, #34495e), 
+                              repeating-linear-gradient(45deg, #34495e 25%, #2c3e50 25%, #2c3e50 75%, #34495e 75%, #34495e);
+            background-position: 0 0, 20px 20px; background-size: 40px 40px; z-index: -1;
         }
 
-        /* 登入區塊 */
-        #auth-box { background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #f1c40f; text-align: center; width: 280px; }
-        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
-        .btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #auth-box { 
+            background: rgba(255, 255, 255, 0.05); padding: 30px; border-radius: 20px; 
+            border: 1px solid rgba(241, 196, 15, 0.5); text-align: center; width: 300px;
+            backdrop-filter: blur(10px);
+        }
+        input { 
+            width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444;
+            background: rgba(0,0,0,0.5); color: white; outline: none;
+        }
+        .btn { 
+            width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; 
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
         .btn-primary { background: #e74c3c; color: white; }
-        .btn-guest { background: #7f8c8d; color: white; }
-        
-        /* 遊戲選單 */
+        .btn-guest { background: transparent; color: #bdc3c7; border: 1px solid #7f8c8d; }
+        .btn:active { transform: scale(0.98); }
+
         #game-menu { display: none; text-align: center; }
-        #start-btn { background: #27ae60; color: white; padding: 15px 60px; font-size: 24px; border-radius: 10px; border: 3px solid white; }
+        #start-btn { 
+            background: #27ae60; color: white; padding: 20px 80px; font-size: 28px; 
+            border-radius: 15px; border: 4px solid #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
 
         canvas { display: block; }
     </style>
@@ -38,25 +69,26 @@
 <body>
 
     <div id="loading-screen">
-        <p>資源加載中...</p>
+        <div id="loading-logo"></div>
+        <p style="letter-spacing: 2px;">系統初始化中</p>
         <div id="loading-bar-container"><div id="loading-bar"></div></div>
-        <p id="percent">0%</p>
+        <p id="percent" style="color: #f1c40f; margin-top: 10px;">0%</p>
     </div>
 
     <div id="ui-container">
-        <div id="menu-bg"></div>
-
+        <div id="menu-art-bg"></div>
+        
         <div id="auth-box">
-            <h3>歷史決戰 - 本機登入</h3>
-            <input type="text" id="username" placeholder="帳號">
-            <input type="password" id="password" placeholder="密碼">
-            <button class="btn btn-primary" onclick="handleAuth('login')">登入 / 註冊</button>
-            <button class="btn btn-guest" onclick="handleAuth('guest')">訪客模式</button>
-            <p id="auth-msg" style="font-size: 12px; color: #f1c40f;"></p>
+            <h2 style="color: #f1c40f; margin-top: 0;">歷史決戰</h2>
+            <input type="text" id="username" placeholder="本機帳號">
+            <input type="password" id="password" placeholder="存檔密碼">
+            <button class="btn btn-primary" onclick="handleAuth('login')">進入戰場</button>
+            <button class="btn btn-guest" onclick="handleAuth('guest')">訪客身份遊玩</button>
+            <p id="auth-msg" style="font-size: 13px; min-height: 15px;"></p>
         </div>
 
         <div id="game-menu">
-            <p id="welcome-txt" style="font-size: 20px; text-shadow: 2px 2px #000;"></p>
+            <h1 id="welcome-txt" style="text-shadow: 0 5px 15px rgba(0,0,0,0.5);"></h1>
             <button id="start-btn" onclick="pressStart()">開始對決</button>
         </div>
     </div>
@@ -65,65 +97,41 @@
 
     <script src="game.js"></script>
     <script>
-        const loadingBar = document.getElementById('loading-bar');
-        const percentText = document.getElementById('percent');
-        const uiContainer = document.getElementById('ui-container');
-        const authBox = document.getElementById('auth-box');
-        const gameMenu = document.getElementById('game-menu');
-
-        // 加載動畫
+        // 模擬加載邏輯
         let prog = 0;
         const loadTimer = setInterval(() => {
-            prog += 5;
-            loadingBar.style.width = prog + '%';
-            percentText.innerText = prog + '%';
+            prog += 2;
+            document.getElementById('loading-bar').style.width = prog + '%';
+            document.getElementById('percent').innerText = prog + '%';
             if (prog >= 100) {
                 clearInterval(loadTimer);
                 document.getElementById('loading-screen').style.display = 'none';
-                uiContainer.style.display = 'flex';
+                document.getElementById('ui-container').style.display = 'flex';
             }
-        }, 50);
+        }, 30);
 
-        // 本機帳號邏輯
         function handleAuth(type) {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
-            const msg = document.getElementById('auth-msg');
-
-            if (type === 'guest') {
-                enterMenu("訪客勇士");
-                return;
-            }
-
-            if (!user || !pass) {
-                msg.innerText = "請輸入帳號密碼";
-                return;
-            }
-
-            const savedPass = localStorage.getItem(`user_${user}`);
-            if (savedPass) {
-                if (savedPass === pass) enterMenu(user);
-                else msg.innerText = "密碼錯誤";
-            } else {
-                localStorage.setItem(`user_${user}`, pass);
-                msg.innerText = "註冊成功並登入";
-                enterMenu(user);
-            }
+            if (type === 'guest') return enterMenu("訪客勇士");
+            if (!user || !pass) return document.getElementById('auth-msg').innerText = "請填寫登入資訊";
+            
+            const savedPass = localStorage.getItem(`pw_${user}`);
+            if (savedPass && savedPass !== pass) return document.getElementById('auth-msg').innerText = "密碼錯誤";
+            if (!savedPass) localStorage.setItem(`pw_${user}`, pass);
+            enterMenu(user);
         }
 
         function enterMenu(name) {
-            authBox.style.display = 'none';
-            gameMenu.style.display = 'block';
-            document.getElementById('welcome-txt').innerText = `歡迎, ${name}`;
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('game-menu').style.display = 'block';
+            document.getElementById('welcome-txt').innerText = `準備好了嗎, ${name}？`;
         }
 
         function pressStart() {
-            // 請求橫屏與全屏
             if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
-            
-            uiContainer.style.display = 'none';
-            if (typeof startGame === "function") startGame();
+            document.getElementById('ui-container').style.display = 'none';
+            startGame();
         }
     </script>
 </body>
