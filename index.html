@@ -1,27 +1,111 @@
-<div id="loading-screen">
-    <img src="loading.jpg" id="loading-img">
-    <div id="loading-bar-container">
-        <div id="loading-bar"></div>
-    </div>
-    <p style="color: white; font-weight: bold;">關稅帝君正在降臨... <span id="percent">0%</span></p>
-</div>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>歷史決戰：帝君對決大總統</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: 'Avenir', 'Helvetica', sans-serif; color: white; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        
+        /* 加載畫面 */
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
+        #loading-bar-container { width: 60%; height: 20px; background: #333; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 2px solid #fff; }
+        #loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #e74c3c, #f1c40f); transition: width 0.1s; }
+        
+        /* 主選單畫面 (使用大合圖) */
+        #menu-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: flex-end; align-items: center; z-index: 9999; }
+        #menu-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('main-menu.png'); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: -1; }
+        #btn-start { background-color: rgba(0,0,0,0.7); color: white; border: 3px solid white; padding: 15px 50px; font-size: 24px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-bottom: 20px; transition: transform 0.2s; -webkit-tap-highlight-color: transparent; }
+        #btn-start:active { transform: scale(0.95); background-color: rgba(0,0,0,0.9); }
+        
+        /* 遊戲畫面 */
+        #gameCanvas { display: block; background: #87CEEB; }
+    </style>
+</head>
+<body>
 
-<style>
-    #loading-screen {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: #000; display: flex; flex-direction: column;
-        justify-content: center; align-items: center; z-index: 10000;
-    }
-    #loading-img {
-        max-width: 80%; max-height: 70%; border: 3px solid #f1c40f;
-        box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
-    }
-    #loading-bar-container {
-        width: 60%; height: 20px; background: #333;
-        border-radius: 10px; margin-top: 20px; overflow: hidden;
-    }
-    #loading-bar {
-        width: 0%; height: 100%; background: linear-gradient(90deg, #e74c3c, #f1c40f);
-        transition: width 0.1s;
-    }
-</style>
+    <div id="loading-screen">
+        <p style="font-size: 24px; font-weight: bold;">資源加載中...</p>
+        <div id="loading-bar-container">
+            <div id="loading-bar"></div>
+        </div>
+        <p><span id="percent">0%</span></p>
+    </div>
+
+    <div id="menu-screen">
+        <div id="menu-bg"></div>
+        <button id="btn-start">點擊開始遊戲</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- 資源與狀態管理 ---
+        let loadProgress = 0;
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingBar = document.getElementById('loading-bar');
+        const percentText = document.getElementById('percent');
+        const menuScreen = document.getElementById('menu-screen');
+        const btnStart = document.getElementById('btn-start');
+        
+        // 模擬資源加載，並檢查必要的檔案是否存在
+        async function checkAssetsAndLoad() {
+            try {
+                // 模擬網絡資源加載進度
+                const interval = setInterval(() => {
+                    loadProgress += Math.random() * 8;
+                    if (loadProgress >= 100) {
+                        clearInterval(interval);
+                        loadProgress = 100;
+                        loadingBar.style.width = '100%';
+                        percentText.innerText = '完成！';
+                        showMenu();
+                    } else {
+                        loadingBar.style.width = loadProgress + '%';
+                        percentText.innerText = Math.floor(loadProgress) + '%';
+                    }
+                }, 150);
+
+            } catch (error) {
+                console.error("加載出錯", error);
+                percentText.innerText = '加載失敗，請檢查檔案名稱';
+            }
+        }
+
+        // --- 選單邏輯 ---
+        function showMenu() {
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                menuScreen.style.display = 'flex';
+            }, 500);
+        }
+
+        btnStart.addEventListener('click', () => {
+            // 請求全螢幕與鎖定橫螢幕
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(e => console.log(e));
+                    }
+                });
+            }
+            menuScreen.style.display = 'none';
+            // 在這裡啟動遊戲初始化
+            // startGame(); 
+        });
+
+        // 啟動資源加載
+        checkAssetsAndLoad();
+
+        // --- PWA Service Worker 註冊 ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW 註冊成功', reg))
+                    .catch(err => console.error('SW 註冊失敗', err));
+            });
+        }
+    </script>
+</body>
+</html>
