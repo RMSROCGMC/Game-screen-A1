@@ -3,73 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>逃離東水 - 極限挑戰</title>
+    <title>逃離東水 - 極限挑戰模式</title>
+    
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0033ad">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
     <style>
         :root { --blue: #0033ad; --gold: #f1c40f; --ice: #00ffff; }
         body { margin: 0; background: #000; color: #fff; font-family: 'Microsoft JhengHei', sans-serif; overflow: hidden; touch-action: none; }
         
-        /* 強制橫屏遮罩：直向時顯示 */
-        #rotate-hint { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        /* 強制橫屏遮罩：僅在直向時顯示 */
+        #rotate-hint { 
+            position: fixed; inset: 0; background: #000; z-index: 9999; 
+            display: none; flex-direction: column; justify-content: center; 
+            align-items: center; text-align: center; 
+        }
         @media screen and (orientation: portrait) { #rotate-hint { display: flex; } }
 
         .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 100; }
-        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 420px; background: #111; }
+        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 450px; background: #111; }
         
-        button { background: var(--blue); color: #fff; border: none; padding: 12px 25px; margin: 8px; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.9); background: var(--gold); color: #000; }
+        button { background: var(--blue); color: #fff; border: none; padding: 12px 20px; margin: 8px; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
+        button:active { transform: scale(0.95); background: var(--gold); color: #000; }
 
-        /* 遊戲頂部 UI */
-        #game-ui { position: fixed; top: 15px; width: 94%; left: 3%; z-index: 50; display: none; }
+        /* 遊戲上方 UI */
+        #game-ui { position: fixed; top: 10px; width: 94%; left: 3%; z-index: 50; display: none; }
         .bar-bg { width: 100%; height: 16px; background: #333; border: 1.5px solid #fff; border-radius: 8px; overflow: hidden; }
-        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); transition: width 0.3s; }
+        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); }
 
         /* 問答視窗 */
         #quiz-box { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 200; }
-        .quiz-content { background: #1a1a1a; border: 3px solid var(--gold); padding: 30px; border-radius: 20px; width: 80%; max-width: 500px; text-align: center; }
-        #ans-zone { display: grid; gap: 12px; margin-top: 25px; }
+        .quiz-content { background: #1a1a1a; border: 3px solid var(--gold); padding: 25px; border-radius: 20px; width: 80%; max-width: 500px; text-align: center; }
+        #ans-zone { display: grid; gap: 10px; margin-top: 20px; }
         
-        #freeze-timer { position: fixed; top: 25%; width: 100%; text-align: center; font-size: 70px; color: var(--ice); font-weight: 900; display: none; pointer-events: none; text-shadow: 0 0 25px var(--ice); }
+        #freeze-timer { position: fixed; top: 25%; width: 100%; text-align: center; font-size: 60px; color: var(--ice); font-weight: 900; display: none; pointer-events: none; }
+        
+        select { padding: 10px; width: 100%; font-size: 16px; margin: 10px 0; background: #222; color: #fff; border: 1px solid var(--gold); }
     </style>
 </head>
 <body>
+
     <div id="rotate-hint">
-        <div style="font-size: 60px;">🔄</div>
-        <h2>請旋轉手機使用「橫向模式」</h2>
-        <p>若無法轉動，請確認「自動旋轉」已開啟</p>
+        <div style="font-size: 50px;">🔄</div>
+        <h2>請旋轉手機進入「橫向模式」</h2>
+        <p>安裝後從桌面啟動可強制橫屏</p>
     </div>
 
     <div id="loading-screen" class="overlay">
-        <div class="box"><h3>東水電子系統加載中...</h3><div class="bar-bg"><div id="load-fill" style="width:0%; height:100%; background:var(--gold);"></div></div></div>
+        <div class="box">
+            <h3>東水系統初始化...</h3>
+            <div class="bar-bg"><div id="load-fill" style="width:0%; height:100%; background:var(--gold);"></div></div>
+            <p id="install-tip" style="font-size:12px; color:#aaa; margin-top:10px;">提示：點擊瀏覽器選單「新增至主螢幕」體驗最佳</p>
+        </div>
     </div>
 
     <div id="setup-screen" class="overlay" style="display:none;">
         <div class="box">
-            <h2 style="color:var(--gold)">逃離東水 - 專業挑戰</h2>
-            <p>選擇科別：</p>
-            <select id="dept-sel" style="padding:12px; width:100%; font-size:16px; border-radius:5px;">
-                <option value="電子">電子科</option><option value="輪機">輪機科</option>
-                <option value="食品">食品科</option><option value="家政">家政科</option><option value="養殖">養殖科</option>
+            <h2 style="color:var(--gold)">逃離東水 - 專業模式</h2>
+            <label>選擇科別：</label>
+            <select id="dept-sel">
+                <option value="電子">電子科</option>
+                <option value="輪機">輪機科</option>
+                <option value="食品">食品科</option>
+                <option value="家政">家政科</option>
+                <option value="養殖">養殖科</option>
             </select>
-            <p>選擇難度：</p>
-            <select id="diff-sel" style="padding:12px; width:100%; font-size:16px; border-radius:5px;">
-                <option value="3000">一般模式 (3km / 150m一抽)</option>
+            <label>選擇難度：</label>
+            <select id="diff-sel">
+                <option value="3000">一般模式 (3km)</option>
                 <option value="extreme">極限模式 (6km / 20m一抽)</option>
             </select>
-            <br><br>
-            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000;">確認進入遊戲 (強制鎖定橫屏)</button>
+            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000; margin-top:15px;">確認進入 (並鎖定橫屏)</button>
         </div>
     </div>
 
     <div id="quiz-box">
         <div class="quiz-content">
-            <h2 id="q-txt">題目載入中...</h2>
+            <h2 id="q-txt" style="font-size: 20px;">題目載入中...</h2>
             <div id="ans-zone"></div>
         </div>
     </div>
 
     <div id="game-ui">
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-weight:bold; font-size:18px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold;">
             <span id="hp-txt">❤️❤️❤️</span>
             <span id="dist-txt">0m / 3000m</span>
         </div>
@@ -81,5 +99,29 @@
 
     <script src="questions.js"></script>
     <script src="game.js"></script>
+
+    <script>
+        // PWA 註冊邏輯
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW 已就緒'))
+                    .catch(err => console.log('SW 註冊失敗', err));
+            });
+        }
+
+        // 監聽 PWA 安裝提示 (Android)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-tip').innerText = "✨ 點此「安裝應用程式」體驗橫屏模式";
+            document.getElementById('install-tip').style.color = "var(--gold)";
+            document.getElementById('install-tip').style.cursor = "pointer";
+            document.getElementById('install-tip').onclick = () => {
+                deferredPrompt.prompt();
+            };
+        });
+    </script>
 </body>
 </html>
