@@ -6,63 +6,68 @@
     <title>逃離東水</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --blue: #0033ad; --gold: #f1c40f; }
+        :root { --blue: #0033ad; --gold: #f1c40f; --ice: #00ffff; }
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
         
-        /* 橫屏強制提醒 */
+        /* 橫屏提示 */
         @media screen and (orientation: portrait) { #rotate-hint { display: flex; } }
         #rotate-hint { position: fixed; inset: 0; background: #000; z-index: 999; display: none; justify-content: center; align-items: center; text-align: center; }
 
-        .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 100; }
-        .box { border: 2px solid var(--gold); padding: 20px; border-radius: 15px; text-align: center; width: 350px; background: rgba(255,255,255,0.1); }
+        .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 100; backdrop-filter: blur(5px); }
+        .box { border: 2px solid var(--gold); padding: 20px; border-radius: 15px; text-align: center; width: 400px; background: rgba(20,20,20,0.8); }
         
-        button { background: var(--blue); color: #fff; border: none; padding: 12px 20px; margin: 5px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        button:active { transform: scale(0.9); }
+        button { background: var(--blue); color: #fff; border: none; padding: 12px 20px; margin: 5px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        button:active { transform: scale(0.9); background: var(--gold); color: #000; }
 
         #game-ui { position: fixed; top: 10px; width: 95%; left: 2.5%; z-index: 50; display: none; }
-        .bar { width: 100%; height: 12px; background: #333; border: 1px solid #fff; border-radius: 6px; overflow: hidden; }
-        #progress { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); }
+        .bar { width: 100%; height: 14px; background: #333; border: 1px solid #fff; border-radius: 7px; overflow: hidden; }
+        #progress { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); transition: width 0.3s; }
 
-        /* 自訂問答 UI - 解決 confirm 換屏問題 */
-        #quiz-box { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 200; }
-        .quiz-content { background: #222; border: 3px solid var(--gold); padding: 20px; border-radius: 15px; width: 80%; max-width: 400px; text-align: center; }
+        /* 自訂問答 UI */
+        #quiz-box { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .quiz-content { background: #111; border: 3px solid var(--gold); padding: 25px; border-radius: 20px; width: 85%; max-width: 500px; text-align: center; }
+        #ans-zone { display: grid; gap: 10px; margin-top: 20px; }
         
-        #freeze-txt { position: fixed; top: 30%; width: 100%; text-align: center; font-size: 50px; color: #0ff; font-weight: bold; display: none; pointer-events: none; }
+        #freeze-txt { position: fixed; top: 20%; width: 100%; text-align: center; font-size: 60px; color: var(--ice); font-weight: bold; display: none; pointer-events: none; text-shadow: 0 0 20px var(--ice); }
     </style>
 </head>
 <body>
-    <div id="rotate-hint"><h1>請旋轉螢幕<br>使用橫向模式遊玩</h1></div>
+    <div id="rotate-hint"><h1>🔄 請旋轉螢幕<br>使用橫向模式逃離東水</h1></div>
 
     <div id="loading-screen" class="overlay">
-        <div class="box"><h3>讀取校徽資源...</h3></div>
-    </div>
-
-    <div id="auth-screen" class="overlay" style="display:none;">
-        <div class="box">
-            <h2 style="color:var(--gold)">逃離東水</h2>
-            <button onclick="enterSetup()">進入遊戲</button>
-        </div>
+        <div class="box"><h3>系統初始化中...</h3><div class="bar"><div id="load-fill" style="width:0%; height:100%; background:var(--gold);"></div></div></div>
     </div>
 
     <div id="setup-screen" class="overlay" style="display:none;">
         <div class="box">
-            <h3>選擇科別與難度</h3>
-            <select id="dept-sel" style="padding:10px; width:100%;"><option>電子</option><option>輪機</option><option>食品</option><option>養殖</option><option>家政</option><option>航管</option></select>
-            <div style="margin: 15px 0;">難度：<select id="diff-sel"><option value="3000">高一 (3km)</option><option value="5000">高二 (5km)</option><option value="7000">高三 (7km)</option></select></div>
-            <button onclick="startGame()" style="background:var(--gold); color:#000;">開始逃離</button>
+            <h2 style="color:var(--gold)">逃離東水 - 專業模式</h2>
+            <p>選擇科別：</p>
+            <select id="dept-sel" style="padding:10px; width:100%; font-size:16px;">
+                <option value="電子">電子科</option>
+                <option value="輪機">輪機科</option>
+                <option value="食品">食品科</option>
+                <option value="家政">家政科</option>
+                <option value="養殖">養殖科</option>
+            </select>
+            <p>選擇難度：</p>
+            <select id="diff-sel" style="padding:10px; width:100%; font-size:16px;">
+                <option value="3000">一般模式 (3km)</option>
+                <option value="extreme">極限模式 (6km / 每 20m 抽考)</option>
+            </select>
+            <br><br>
+            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000;">開始逃離</button>
         </div>
     </div>
 
     <div id="quiz-box">
         <div class="quiz-content">
-            <h2 id="q-txt">題目載入中...</h2>
-            <button onclick="handleAns(true)" style="width:100%; margin:5px 0;">正確 (O)</button>
-            <button onclick="handleAns(false)" style="width:100%; margin:5px 0;">錯誤 (X)</button>
+            <h2 id="q-txt">題目加載中...</h2>
+            <div id="ans-zone"></div>
         </div>
     </div>
 
     <div id="game-ui">
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold;">
             <span id="hp-txt">❤️❤️❤️</span>
             <span id="dist-txt">0m / 3000m</span>
         </div>
@@ -72,6 +77,7 @@
     <div id="freeze-txt">0.00s</div>
     <canvas id="gameCanvas"></canvas>
 
+    <script src="questions.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
