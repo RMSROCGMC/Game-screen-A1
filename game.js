@@ -1,134 +1,145 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 素材載入
-const logoImg = new Image();
-logoImg.src = "logo.jpeg"; 
+const logo = new Image();
+logo.src = "logo.jpeg"; 
 let logoLoaded = false;
-logoImg.onload = () => { 
-    logoLoaded = true; 
-    document.getElementById('load-fill').style.width = "100%";
-    setTimeout(() => {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
-    }, 500);
+logo.onload = () => {
+    logoLoaded = true;
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
 };
 
-// 遊戲狀態
-let gameActive = false, isPaused = false, isDev = false;
-let clouds = [];
-let state = { dist: 0, target: 3000, hp: 3, dept: '', diff: 'easy', chaseX: -300, freeze: 0, leg: 0, lastQuiz: 0 };
+let gameOn = false, isPaused = false;
+let state = { dist: 0, target: 3000, hp: 3, chaseX: -250, freeze: 0, lastQuiz: 0, interval: 150, dept: '' };
+let currentPool = [];
 
-// 1. 強制鎖定橫屏邏輯
-async function lockOrientation() {
+// 強制全螢幕與方向
+async function lockScreen() {
     try {
-        if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) {
-            await screen.orientation.lock('landscape');
-        }
-    } catch (e) { console.log("無法強制鎖定，請手動旋轉"); }
+        if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+    } catch (e) { console.warn("Lock failed"); }
 }
 
-function auth() { document.getElementById('auth-screen').style.display='none'; document.getElementById('level-screen').style.display='flex'; }
-function showDev() { document.getElementById('auth-main').style.display='none'; document.getElementById('auth-dev').style.display='block'; }
-function verifyDev() { if(document.getElementById('dev-pw').value === '410205x') { isDev = true; document.getElementById('dev-panel').style.display='block'; auth(); } }
-function setDept(d) { state.dept = d; document.getElementById('start-ctrl').style.display='block'; }
-
 async function launchGame() {
-    await lockOrientation(); // 啟動全螢幕與鎖定
-    state.diff = document.getElementById('diff-sel').value;
-    const cfg = { easy: [3000, 3], normal: [4500, 2], hard: [6000, 1] };
-    [state.target, state.hp] = cfg[state.diff];
+    await lockScreen();
+    const dept = document.getElementById('dept-sel').value;
+    const diff = document.getElementById('diff-sel').value;
     
-    document.getElementById('level-screen').style.display = 'none';
+    state.dept = dept;
+    // 鎖定科別題庫
+    const rawData = GAME_QUESTIONS[dept] || GAME_QUESTIONS["通用"];
+    currentPool = shufflePool([...rawData]);
+
+    if (diff === "extreme") {
+        state.target = 6000;
+        state.hp = 1;
+        state.interval = 20; 
+    } else {
+        state.target = 3000;
+        state.hp = 3;
+        state.interval = 150;
+    }
+
+    document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('game-ui').style.display = 'block';
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    for(let i=0; i<6; i++) clouds.push({x: Math.random()*canvas.width, y: 50+Math.random()*80, s: 0.4+Math.random()});
-    gameActive = true;
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gameOn = true;
     requestAnimationFrame(loop);
 }
 
-// 2. 問答系統 (不卡畫面版)
-function triggerQuiz() {
+function askQuiz() {
     isPaused = true;
-    document.getElementById('quiz-screen').style.display = 'flex';
-    document.getElementById('quiz-q').innerText = `【${state.dept}科】專題檢查：\n數位電路中，1+1 在二進位等於 10 嗎？`;
+    if (currentPool.length === 0) {
+        const rawData = GAME_QUESTIONS[state.dept] || GAME_QUESTIONS["通用"];
+        currentPool = shufflePool([...rawData]);
+    }
+    
+    const qData = currentPool.pop();
+    state.correctIdx = qData.a;
+
+    document.getElementById('quiz-box').style.display = 'flex';
+    document.getElementById('q-txt').innerText = `【${state.dept}科專業抽考】\n${qData.q}`;
+    
+    const zone = document.getElementById('ans-zone');
+    zone.innerHTML = "";
+    qData.options.forEach((text, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = text;
+        btn.onclick = () => handleAns(i);
+        zone.appendChild(btn);
+    });
 }
 
-function answer(isCorrect) {
-    document.getElementById('quiz-screen').style.display = 'none';
+function handleAns(idx) {
+    document.getElementById('quiz-box').style.display = 'none';
     isPaused = false;
-    if(!isCorrect) state.freeze = 180; // 凍結 3 秒
+    if (idx === state.correctIdx) {
+        state.chaseX -= 100; // 答對 Boss 噴遠一點
+    } else {
+        state.freeze = 180; // 答錯冰凍 3 秒
+    }
 }
 
 function update() {
-    if(!gameActive || isPaused) return;
+    if (!gameOn || isPaused) return;
 
-    if(state.freeze > 0) {
+    if (state.freeze > 0) {
         state.freeze--;
-        document.getElementById('freeze-ui').style.display = 'block';
-        document.getElementById('freeze-ui').innerText = (state.freeze/60).toFixed(2) + "s";
-        state.chaseX += 1.0; // 凍結時 Boss 逼近速度調慢
+        document.getElementById('freeze-txt').style.display = 'block';
+        document.getElementById('freeze-txt').innerText = (state.freeze/60).toFixed(2) + "s";
+        state.chaseX += 1.8; 
     } else {
-        document.getElementById('freeze-ui').style.display = 'none';
-        state.dist += 0.8; 
-        state.chaseX += 0.6; // 正常追擊速度
-        state.leg += 0.15;
+        document.getElementById('freeze-txt').style.display = 'none';
+        state.dist += 1;
+        state.chaseX += 1.0;
     }
 
-    if(isDev) {
-        state.dist = parseFloat(document.getElementById('d-dist').value) || state.dist;
-        state.hp = parseInt(document.getElementById('d-hp').value) || state.hp;
-    }
-
-    // 每 200m 觸發一次問答
-    if(Math.floor(state.dist) > 0 && Math.floor(state.dist) % 200 === 0 && Math.floor(state.dist) !== state.lastQuiz) {
+    // 間隔判斷
+    if (Math.floor(state.dist) > 0 && Math.floor(state.dist) % state.interval === 0 && Math.floor(state.dist) !== state.lastQuiz) {
         state.lastQuiz = Math.floor(state.dist);
-        triggerQuiz();
+        askQuiz();
     }
 
-    // 碰撞檢查
-    if(state.chaseX > 220) {
-        state.hp--; state.chaseX = -400;
-        if(state.hp <= 0) { alert("被抓回去補考了！"); location.reload(); }
+    if (state.chaseX > 280) {
+        state.hp--;
+        state.chaseX = -350;
+        if (state.hp <= 0) { alert("逃離失敗，請回教務處報到！"); location.reload(); }
     }
-    if(state.dist >= state.target) { alert("恭喜畢業！成功脫離東水！"); location.reload(); }
+    if (state.dist >= state.target) { alert("恭喜成功逃離東水！畢業快樂！"); location.reload(); }
 }
 
 function draw() {
-    let r = 130 - (state.dist/state.target)*100, g = 180 - (state.dist/state.target)*150, b = 255 - (state.dist/state.target)*180;
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    // 天空背景隨距離變深
+    let b = 235 - (state.dist/state.target)*150;
+    ctx.fillStyle = `rgb(100, 150, ${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    clouds.forEach(c => {
-        ctx.beginPath(); ctx.arc(c.x, c.y, 20*c.s, 0, Math.PI*2); ctx.fill();
-        c.x -= c.s; if(c.x < -100) c.x = canvas.width + 100;
-    });
+    // 玩家
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(300, canvas.height - 160, 30, 60);
 
-    ctx.fillStyle = "#444"; ctx.fillRect(0, canvas.height-80, canvas.width, 80);
-
-    // 畫主角
-    ctx.save(); ctx.translate(280, canvas.height-80);
-    if(state.freeze > 0) { ctx.fillStyle = "rgba(0,255,255,0.5)"; ctx.fillRect(-25, -75, 50, 75); }
-    ctx.fillStyle = "#fff"; ctx.fillRect(-12, -50, 24, 40); 
-    ctx.fillStyle = "#ffdbac"; ctx.beginPath(); ctx.arc(0, -62, 10, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-
-    // 畫校徽 Boss
-    if(logoLoaded) {
-        ctx.save(); ctx.translate(state.chaseX, canvas.height - 130);
-        ctx.shadowBlur = 15; ctx.shadowColor = "red";
-        ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI*2); ctx.clip();
-        ctx.drawImage(logoImg, -55, -55, 110, 110);
+    // Boss
+    if (logoLoaded) {
+        ctx.save();
+        ctx.translate(state.chaseX, canvas.height - 150);
+        ctx.beginPath(); ctx.arc(0, 0, 65, 0, Math.PI*2); ctx.clip();
+        ctx.drawImage(logo, -65, -65, 130, 130);
         ctx.restore();
     }
 
-    document.getElementById('hp-ui').innerText = "❤️".repeat(state.hp);
-    document.getElementById('dist-ui').innerText = `${Math.floor(state.dist)}m / ${state.target}m`;
-    document.getElementById('progress-bar').style.width = (state.dist/state.target*100) + "%";
+    document.getElementById('hp-txt').innerText = "❤️".repeat(state.hp);
+    document.getElementById('dist-txt').innerText = `${Math.floor(state.dist)}m / ${state.target}m`;
+    document.getElementById('progress').style.width = (state.dist / state.target * 100) + "%";
 }
 
-function loop() { update(); draw(); if(gameActive) requestAnimationFrame(loop); }
+function loop() {
+    update(); draw();
+    if (gameOn) requestAnimationFrame(loop);
+}
