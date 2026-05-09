@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>逃離東水 - 專業挑戰</title>
+    <title>逃離東水 - 專業模式</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0033ad">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,9 +15,11 @@
         @media screen and (orientation: portrait) { #rotate-hint { display: flex; } }
 
         .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 100; }
-        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 400px; background: #111; }
+        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 420px; background: #111; }
         
         button { background: var(--blue); color: #fff; border: none; padding: 12px 20px; margin: 8px; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
+        button:active { transform: scale(0.95); background: var(--gold); color: #000; }
+
         label { display: block; margin-top: 10px; font-weight: bold; color: var(--gold); }
         select { padding: 10px; width: 100%; font-size: 16px; margin: 5px 0 15px 0; background: #222; color: #fff; border: 1px solid var(--gold); border-radius: 5px; }
 
@@ -32,7 +34,7 @@
     </style>
 </head>
 <body>
-    <div id="rotate-hint"><h2>🔄 請旋轉手機</h2><p>安裝 PWA 後可自動鎖定橫屏</p></div>
+    <div id="rotate-hint"><h2>🔄 請旋轉手機進入橫向</h2><p>從桌面圖示啟動效果最佳</p></div>
 
     <div id="setup-screen" class="overlay">
         <div class="box">
@@ -45,16 +47,31 @@
             <select id="dept-sel">
                 <option value="電子">電子科</option><option value="輪機">輪機科</option>
                 <option value="食品">食品科</option><option value="家政">家政科</option>
+                <option value="養殖">養殖科</option>
             </select>
-            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000;">開始遊戲</button>
+            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000;">確認進入</button>
+        </div>
+    </div>
+
+    <div id="tutorial-screen" class="overlay" style="display:none;">
+        <div class="box">
+            <h2 style="color:var(--gold)">🎓 逃離指南</h2>
+            <p style="text-align:left; font-size:14px; line-height:1.6;">
+                ● <b>自動奔跑：</b>主角會持續前進。<br>
+                ● <b>專業抽考：</b>每 150m 跳出題目。<br>
+                ● <b>答對：</b>大幅甩開 Boss。<br>
+                ● <b>答錯：</b>被冰凍 3 秒，Boss 趁機追上。<br>
+                ● <b>失敗：</b>愛心扣完即送教務處補考！
+            </p>
+            <button onclick="startGameActual()" style="width:100%;">我知道了，開跑！</button>
         </div>
     </div>
 
     <div id="end-screen" class="overlay" style="display:none; z-index:500;">
         <div class="box">
             <h1 id="end-title"></h1>
-            <p id="end-msg"></p>
-            <button onclick="location.reload()" style="width:100%;">重新嘗試</button>
+            <p id="end-msg" style="font-size:18px; margin:20px 0;"></p>
+            <button onclick="location.reload()" style="width:100%;">回首頁</button>
         </div>
     </div>
 
@@ -70,7 +87,7 @@
     <script src="game.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log('PWA Ready'));
+            navigator.serviceWorker.register('sw.js').then(() => console.log('PWA SW OK'));
         }
     </script>
 </body>
