@@ -6,21 +6,25 @@
     <title>歷史決戰：帝君對決大總統</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: 'Avenir', 'Helvetica', sans-serif; color: white; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: sans-serif; color: white; -webkit-touch-callout: none; user-select: none; }
         
         /* 加載畫面 */
         #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
         #loading-bar-container { width: 60%; height: 20px; background: #333; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 2px solid #fff; }
         #loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #e74c3c, #f1c40f); transition: width 0.1s; }
         
-        /* 主選單畫面 (使用大合圖) */
+        /* 主選單畫面 */
         #menu-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: flex-end; align-items: center; z-index: 9999; }
-        #menu-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('main-menu.png'); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: -1; }
-        #btn-start { background-color: rgba(0,0,0,0.7); color: white; border: 3px solid white; padding: 15px 50px; font-size: 24px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-bottom: 20px; transition: transform 0.2s; -webkit-tap-highlight-color: transparent; }
-        #btn-start:active { transform: scale(0.95); background-color: rgba(0,0,0,0.9); }
+        #menu-bg { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url('1778345687994.png'); /* 請確保 GitHub 檔名完全一致 */
+            background-size: contain; background-repeat: no-repeat; background-position: center; z-index: -1; 
+        }
+        #btn-start { background-color: rgba(231, 76, 60, 0.9); color: white; border: 3px solid white; padding: 15px 50px; font-size: 24px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-bottom: 10%; transition: transform 0.2s; -webkit-tap-highlight-color: transparent; }
+        #btn-start:active { transform: scale(0.95); }
         
-        /* 遊戲畫面 */
-        #gameCanvas { display: block; background: #87CEEB; }
+        /* 遊戲畫布 */
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -35,76 +39,61 @@
 
     <div id="menu-screen">
         <div id="menu-bg"></div>
-        <button id="btn-start">點擊開始遊戲</button>
+        <button id="btn-start">開始對決</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
+    <script src="game.js"></script>
+
     <script>
-        // --- 資源與狀態管理 ---
-        let loadProgress = 0;
         const loadingScreen = document.getElementById('loading-screen');
         const loadingBar = document.getElementById('loading-bar');
         const percentText = document.getElementById('percent');
         const menuScreen = document.getElementById('menu-screen');
         const btnStart = document.getElementById('btn-start');
         
-        // 模擬資源加載，並檢查必要的檔案是否存在
-        async function checkAssetsAndLoad() {
-            try {
-                // 模擬網絡資源加載進度
-                const interval = setInterval(() => {
-                    loadProgress += Math.random() * 8;
-                    if (loadProgress >= 100) {
-                        clearInterval(interval);
-                        loadProgress = 100;
-                        loadingBar.style.width = '100%';
-                        percentText.innerText = '完成！';
-                        showMenu();
-                    } else {
-                        loadingBar.style.width = loadProgress + '%';
-                        percentText.innerText = Math.floor(loadProgress) + '%';
-                    }
-                }, 150);
-
-            } catch (error) {
-                console.error("加載出錯", error);
-                percentText.innerText = '加載失敗，請檢查檔案名稱';
+        // 模擬加載
+        let progress = 0;
+        const timer = setInterval(() => {
+            progress += Math.random() * 10;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(timer);
+                percentText.innerText = '完成！';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    menuScreen.style.display = 'flex';
+                }, 500);
             }
-        }
+            loadingBar.style.width = progress + '%';
+            percentText.innerText = Math.floor(progress) + '%';
+        }, 100);
 
-        // --- 選單邏輯 ---
-        function showMenu() {
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-                menuScreen.style.display = 'flex';
-            }, 500);
-        }
-
+        // 點擊開始
         btnStart.addEventListener('click', () => {
-            // 請求全螢幕與鎖定橫螢幕
+            // 請求全螢幕
             if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().then(() => {
-                    if (screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock('landscape').catch(e => console.log(e));
-                    }
-                });
+                document.documentElement.requestFullscreen().catch(e => console.log("全螢幕受阻"));
             }
+            // 嘗試鎖定橫屏
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(e => console.log("鎖定橫屏受阻"));
+            }
+
             menuScreen.style.display = 'none';
-            // 在這裡啟動遊戲初始化
-            // startGame(); 
+            
+            // 執行 game.js 裡的啟動函數
+            if (typeof startGame === "function") {
+                startGame();
+            } else {
+                alert("錯誤：game.js 尚未讀取成功");
+            }
         });
 
-        // 啟動資源加載
-        checkAssetsAndLoad();
-
-        // --- PWA Service Worker 註冊 ---
+        // 註冊 SW
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW 註冊成功', reg))
-                    .catch(err => console.error('SW 註冊失敗', err));
-            });
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>
