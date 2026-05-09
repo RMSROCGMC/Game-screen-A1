@@ -1,16 +1,23 @@
 {
-  "name": "歷史決戰：帝君對決大總統",
-  "short_name": "歷史決戰",
-  "start_url": "index.html",
-  "display": "standalone",
-  "orientation": "landscape",
-  "background_color": "#2c3e50",
-  "theme_color": "#e74c3c",
+  "short_name": "逃離東水",
+  "name": "逃離東水：東港海事專業科目跑酷遊戲",
   "icons": [
     {
-      "src": "1778345687994.png",
-      "sizes": "1024x1024",
-      "type": "image/png"
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": "index.html",
+  "background_color": "#0033ad",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#0033ad",
+  "orientation": "landscape",
+  "description": "挑戰你的專業知識，逃離追趕！"
 }
