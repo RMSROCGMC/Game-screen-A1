@@ -3,95 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>逃離東水</title>
-    <link rel="manifest" href="manifest.json">
+    <title>逃離東水 - 實體校徽版</title>
     <style>
         :root { --main-blue: #0033ad; --main-gold: #f1c40f; }
-        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Microsoft JhengHei', sans-serif; color: white; user-select: none; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Microsoft JhengHei', sans-serif; color: white; }
         
-        /* 強制橫屏提示 (如果手機直拿) */
-        @media screen and (orientation: portrait) {
-            #portrait-warning { display: flex; }
-        }
-        #portrait-warning { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; 
-            z-index: 20000; display: none; justify-content: center; align-items: center; text-align: center;
-        }
+        /* 橫屏提醒 */
+        @media screen and (orientation: portrait) { #portrait-hint { display: flex; } }
+        #portrait-hint { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; justify-content: center; align-items: center; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; background: rgba(0,0,0,0.9); }
-        .box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; border: 2px solid var(--main-gold); text-align: center; width: 400px; backdrop-filter: blur(10px); }
+        /* UI 通用樣式 */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
+        .box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; border: 2px solid var(--main-gold); text-align: center; width: 450px; }
         
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        input, button, select { padding: 10px; border-radius: 5px; border: none; font-weight: bold; }
-        button { cursor: pointer; transition: 0.2s; }
-        .btn-blue { background: var(--main-blue); color: white; }
-        .btn-gold { background: var(--main-gold); color: black; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+        input, button, select { padding: 10px; border-radius: 5px; border: none; font-weight: bold; margin: 4px 0; }
+        button { cursor: pointer; background: var(--main-blue); color: #fff; }
+        button:active { transform: scale(0.95); }
+        .btn-dev { background: #666; font-size: 10px; opacity: 0.5; }
 
-        /* 開發者面板 */
-        #dev-panel { 
-            position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.7); 
-            padding: 10px; border-radius: 5px; z-index: 1000; display: none; font-size: 12px;
-        }
-        #dev-panel input { width: 50px; padding: 2px; }
+        /* 頂部進度條 */
+        #game-ui { position: fixed; top: 10px; left: 10px; right: 10px; display: none; z-index: 50; }
+        .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
+        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); }
 
-        /* 冰凍時間顯示 */
-        #freeze-ui { 
-            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 40px; color: #00ffff; font-weight: bold; text-shadow: 0 0 10px #fff;
-            display: none; z-index: 1000;
-        }
-
-        canvas { display: block; background: #87CEEB; }
+        /* 冰凍文字 */
+        #freeze-timer { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); font-size: 48px; color: #00ffff; text-shadow: 0 0 20px #00ffff; display: none; font-weight: 900; z-index: 60; }
+        
+        #dev-console { position: fixed; bottom: 5px; right: 5px; background: rgba(255,0,0,0.5); padding: 5px; font-size: 12px; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
-    <div id="portrait-warning"><h1>請旋轉螢幕以進行遊戲</h1></div>
+    <div id="portrait-hint"><h1>請旋轉至橫屏遊玩</h1></div>
 
-    <div id="auth-screen" class="overlay">
+    <div id="loading-screen" class="overlay">
         <div class="box">
-            <canvas id="logo-canvas" width="120" height="120"></canvas>
-            <h2>逃離東水</h2>
-            <div id="login-options" class="menu-grid">
-                <button class="btn-blue" onclick="showLogin('guest')">訪客登入</button>
-                <button class="btn-blue" onclick="showLogin('local')">本地帳號</button>
-                <button class="btn-blue" onclick="showLogin('create')">創建帳號</button>
-                <button class="btn-gold" onclick="showLogin('dev')">開發者登入</button>
+            <div id="loader-logo">正在讀取東水校徽...</div>
+            <div class="progress-container" style="margin-top:20px;"><div id="load-bar" style="width:0%; height:100%; background:var(--main-gold);"></div></div>
+        </div>
+    </div>
+
+    <div id="auth-screen" class="overlay" style="display:none;">
+        <div class="box">
+            <h2 style="color:var(--main-gold);">逃離東水</h2>
+            <div id="auth-main">
+                <button onclick="auth('guest')">訪客登入</button>
+                <button onclick="showForm('login')">本地登入</button>
+                <button onclick="showForm('reg')">創建帳號</button><br>
+                <button class="btn-dev" onclick="showForm('dev')">開發者入口</button>
             </div>
-            <div id="auth-form" style="display:none; margin-top:15px;">
-                <input type="text" id="user-in" placeholder="帳號">
-                <input type="password" id="pass-in" placeholder="密碼">
-                <button class="btn-gold" onclick="handleAuth()">確認</button>
-                <button style="background:none; color:white; font-size:12px;" onclick="backToMenu()">返回</button>
+            <div id="auth-form" style="display:none;">
+                <input type="text" id="uid" placeholder="使用者名稱">
+                <input type="password" id="upw" placeholder="密碼">
+                <button onclick="submitAuth()" style="background:var(--main-gold); color:#000;">確認進入</button>
             </div>
         </div>
     </div>
 
     <div id="level-screen" class="overlay" style="display:none;">
         <div class="box" style="width: 80%;">
-            <h3>選擇科別</h3>
+            <h3>選擇科別戰場</h3>
             <div class="menu-grid">
-                <button onclick="selectDept('電子')">電子科</button>
-                <button onclick="selectDept('輪機')">輪機科</button>
-                <button onclick="selectDept('食品')">食品科</button>
-                <button onclick="selectDept('養殖')">養殖科</button>
-                <button onclick="selectDept('家政')">家政科</button>
-                <button onclick="selectDept('航管')">航管科</button>
+                <button onclick="sel('電子')">電子</button><button onclick="sel('輪機')">輪機</button><button onclick="sel('食品')">食品</button>
+                <button onclick="sel('養殖')">養殖</button><button onclick="sel('家政')">家政</button><button onclick="sel('航管')">航管</button>
             </div>
-            <div id="sub-setting" style="display:none; margin-top:20px; border-top:1px solid #fff; padding-top:10px;">
-                年級：<select id="sel-grade"><option value="1">高一</option><option value="2">高二</option><option value="3">高三</option></select>
-                難度：<select id="sel-diff"><option value="easy">簡單</option><option value="normal">普通</option><option value="hard">困難</option><option value="extreme">極限</option></select>
-                <button class="btn-gold" onclick="startGame()">開始跑酷</button>
+            <div id="difficulty-box" style="display:none; margin-top:15px;">
+                年級：<select id="grade"><option value="1">高一</option><option value="2">高二</option><option value="3">高三</option></select>
+                難度：<select id="diff"><option value="easy">簡單</option><option value="normal">普通</option><option value="hard">困難</option><option value="extreme">極限</option></select>
+                <button onclick="launch()" style="background:var(--main-gold); color:#000; width:100px;">出發</button>
             </div>
         </div>
     </div>
 
-    <div id="dev-panel">
-        距離: <input type="number" id="dev-dist" onchange="gameState.distance = parseInt(this.value)"> 
-        心: <input type="number" id="dev-hp" onchange="gameState.hp = parseInt(this.value)">
+    <div id="game-ui">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span id="hp-box">❤️❤️❤️</span>
+            <span id="dist-txt">0m / 3000m</span>
+        </div>
+        <div class="progress-container"><div id="progress-bar"></div></div>
     </div>
 
-    <div id="freeze-ui">0.20s</div>
+    <div id="freeze-timer">0.20s</div>
+    <div id="dev-console">開發模式: Dist <input type="number" id="d-dist" style="width:60px"> HP <input type="number" id="d-hp" style="width:40px"></div>
 
     <canvas id="gameCanvas"></canvas>
 
