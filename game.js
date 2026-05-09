@@ -1,149 +1,126 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- 資源預載 ---
 const logoImg = new Image();
-logoImg.crossOrigin = "anonymous";
-// 直接使用你提供的 Wiki 校徽網址
-logoImg.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/National_Marine_Fisheries_Donggang_advanced_vocational_school.JPG";
+logoImg.src = "logo.jpeg"; // 修正為你的檔案路徑
 
 let logoLoaded = false;
-logoImg.onload = () => { 
-    logoLoaded = true; 
-    setTimeout(() => {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
-    }, 1000);
-};
-
-// 模擬進度條
-let lpb = 0;
-const lt = setInterval(() => {
-    lpb += 5; document.getElementById('load-bar').style.width = lpb + "%";
-    if(lpb >= 100) clearInterval(lt);
-}, 50);
-
-// --- 遊戲狀態 ---
-let gameActive = false;
-let isDev = false;
-let isPaused = false;
+let gameActive = false, isPaused = false, isDev = false;
 let clouds = [], birds = [];
 let state = { dist: 0, target: 3000, hp: 3, dept: '', grade: 1, diff: 'easy', chaseX: -200, freeze: 0, leg: 0 };
 
-// --- 登入控制 ---
-let curMode = '';
-function showForm(m) { curMode = m; document.getElementById('auth-main').style.display='none'; document.getElementById('auth-form').style.display='block'; }
-function auth(m) { curMode = m; submitAuth(); }
+logoImg.onload = () => { 
+    logoLoaded = true;
+    document.getElementById('load-fill').style.width = "100%";
+    setTimeout(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+    }, 800);
+};
 
-function submitAuth() {
-    const u = document.getElementById('uid').value;
-    const p = document.getElementById('upw').value;
-    if(curMode === 'dev' && p === '410205x') { isDev = true; document.getElementById('dev-console').style.display='block'; }
+function auth(m) {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('level-screen').style.display = 'flex';
 }
 
-function sel(d) { state.dept = d; document.getElementById('difficulty-box').style.display='block'; }
+function showForm(m) {
+    document.getElementById('auth-main').style.display = 'none';
+    document.getElementById('auth-form').style.display = 'block';
+}
 
-function launch() {
-    state.grade = document.getElementById('grade').value;
-    state.diff = document.getElementById('diff').value;
-    if(state.diff === 'extreme' && state.grade < 2 && !isDev) return alert("高二以上才可開啟極限！");
-    
-    document.getElementById('level-screen').style.display='none';
-    document.getElementById('game-ui').style.display='block';
+function checkDev() {
+    if(document.getElementById('dev-pw').value === '410205x') {
+        isDev = true;
+        document.getElementById('dev-panel').style.display = 'block';
+        auth();
+    } else alert("密碼錯誤");
+}
+
+function setDept(d) {
+    state.dept = d;
+    document.getElementById('game-sets').style.display = 'block';
+}
+
+function start() {
+    state.grade = document.getElementById('grade-sel').value;
+    state.diff = document.getElementById('diff-sel').value;
+    const targets = { easy: 3000, normal: 4500, hard: 5000, extreme: 6000 };
+    const hps = { easy: 3, normal: 2, hard: 1, extreme: 1 };
+    state.target = targets[state.diff];
+    state.hp = hps[state.diff];
+
+    document.getElementById('level-screen').style.display = 'none';
+    document.getElementById('game-ui').style.display = 'block';
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    
-    // 初始化環境
-    for(let i=0; i<6; i++) clouds.push({x: Math.random()*canvas.width, y: Math.random()*150, s: 0.5+Math.random()});
+    for(let i=0; i<5; i++) clouds.push({x: Math.random()*canvas.width, y: 50+Math.random()*100, s: 0.5+Math.random()});
     gameActive = true;
     requestAnimationFrame(loop);
 }
 
-// --- 核心循環 ---
 function update() {
     if(!gameActive || isPaused) return;
 
     if(state.freeze > 0) {
         state.freeze--;
-        document.getElementById('freeze-timer').style.display = 'block';
-        document.getElementById('freeze-timer').innerText = (state.freeze/60).toFixed(2) + "s";
-        state.chaseX += 3; // 冰凍時校徽逼近變快
+        document.getElementById('freeze-ui').style.display = 'block';
+        document.getElementById('freeze-ui').innerText = (state.freeze/60).toFixed(2) + "s";
+        state.chaseX += 2.5;
     } else {
-        document.getElementById('freeze-timer').style.display = 'none';
-        state.dist += 1;
-        state.chaseX += 1.8;
-        state.leg += 0.2;
+        document.getElementById('freeze-ui').style.display = 'none';
+        state.dist += 1; state.chaseX += 1.8; state.leg += 0.2;
     }
 
     if(isDev) {
-        state.dist = parseInt(document.getElementById('d-dist').value) || state.dist;
-        state.hp = parseInt(document.getElementById('d-hp').value) || state.hp;
+        if(document.getElementById('d-dist').value) state.dist = parseInt(document.getElementById('d-dist').value);
+        if(document.getElementById('d-hp').value) state.hp = parseInt(document.getElementById('d-hp').value);
     }
 
-    // 碰撞檢查
     if(state.chaseX > 250) {
         state.hp--; state.chaseX = -300;
-        if(state.hp <= 0) { alert("你被抓到了！"); location.reload(); }
+        if(state.hp <= 0) { alert("逃離失敗！"); location.reload(); }
     }
-
-    // 問答觸發 (每 20m)
-    if(state.dist % 20 === 0 && state.dist > 0) triggerQuiz();
-}
-
-function triggerQuiz() {
-    isPaused = true;
-    const ans = confirm("【專業科目挑戰】\n1+1=2 嗎？(模擬題目，點確定正確，取消錯誤)");
-    if(!ans) state.freeze = 120; // 凍結 2 秒
-    isPaused = false;
+    
+    if(state.dist >= state.target) { alert("您畢業了！"); location.reload(); }
+    if(state.dist % 20 === 0 && state.dist > 0) {
+        isPaused = true;
+        if(!confirm("【專業挑戰】準備好了嗎？(模擬答題，取消即凍結)")) state.freeze = 120;
+        isPaused = false;
+    }
 }
 
 function draw() {
-    // 天空背景 (隨距離變晚)
-    let r = 135 - (state.dist/3000)*100, g = 206 - (state.dist/3000)*150, b = 235 - (state.dist/3000)*150;
+    // 天空漸變
+    let ratio = state.dist / state.target;
+    let r = 135 - ratio*100, g = 206 - ratio*160, b = 235 - ratio*200;
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 雲朵
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    // 雲朵動畫
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
     clouds.forEach(c => {
-        ctx.beginPath(); ctx.arc(c.x, c.y, 30*c.s, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(c.x, c.y, 25*c.s, 0, Math.PI*2); ctx.fill();
         c.x -= c.s; if(c.x < -100) c.x = canvas.width + 100;
     });
 
-    // 地板
+    // 地板與英雄
     ctx.fillStyle = "#333"; ctx.fillRect(0, canvas.height-100, canvas.width, 100);
-
-    // 英雄 (繪製跑步動作)
-    ctx.save();
-    ctx.translate(300, canvas.height-100);
-    if(state.freeze > 0) {
-        ctx.fillStyle = "rgba(0,255,255,0.5)"; ctx.fillRect(-25, -80, 50, 80); // 冰塊
-    }
-    ctx.fillStyle = "#fff"; ctx.fillRect(-15, -60, 30, 40); // 身體
-    ctx.fillStyle = "#ffdbac"; ctx.beginPath(); ctx.arc(0, -75, 12, 0, Math.PI*2); ctx.fill(); // 頭
-    // 腿部動畫
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 6;
-    let l1 = Math.sin(state.leg)*15, l2 = Math.sin(state.leg + Math.PI)*15;
-    ctx.beginPath(); ctx.moveTo(-5, -20); ctx.lineTo(-5 + l1, 0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(5, -20); ctx.lineTo(5 + l2, 0); ctx.stroke();
+    ctx.save(); ctx.translate(300, canvas.height-100);
+    if(state.freeze > 0) { ctx.fillStyle = "rgba(0,255,255,0.4)"; ctx.fillRect(-25, -80, 50, 80); }
+    ctx.fillStyle = "#fff"; ctx.fillRect(-15, -60, 30, 45); 
+    ctx.fillStyle = "#ffdbac"; ctx.beginPath(); ctx.arc(0, -72, 12, 0, Math.PI*2); ctx.fill();
     ctx.restore();
 
-    // 畫校徽原圖
+    // 繪製校徽
     if(logoLoaded) {
-        ctx.save();
-        ctx.translate(state.chaseX, canvas.height - 150);
-        ctx.shadowBlur = 20; ctx.shadowColor = "red";
-        // 將原圖畫成圓形
+        ctx.save(); ctx.translate(state.chaseX, canvas.height - 150);
         ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI*2); ctx.clip();
         ctx.drawImage(logoImg, -60, -60, 120, 120);
         ctx.restore();
     }
 
-    // 更新 UI
-    document.getElementById('dist-txt').innerText = `${Math.floor(state.dist)}m / ${state.target}m`;
+    document.getElementById('dist-display').innerText = `${Math.floor(state.dist)}m / ${state.target}m`;
     document.getElementById('progress-bar').style.width = (state.dist/state.target*100) + "%";
-    document.getElementById('hp-box').innerText = "❤️".repeat(state.hp);
+    document.getElementById('hp-display').innerText = "❤️".repeat(state.hp);
 }
 
 function loop() { update(); draw(); if(gameActive) requestAnimationFrame(loop); }
