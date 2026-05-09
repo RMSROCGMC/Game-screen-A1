@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tkms-escape-v1';
+const CACHE_NAME = 'tkms-escape-v7.6';
 const ASSETS = ['./', './index.html', './game.js', './manifest.json', './logo.jpeg']; // 修正檔案名
 
 self.addEventListener('install', (e) => {
