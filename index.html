@@ -6,84 +6,92 @@
     <title>逃離東水</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --main-blue: #0033ad; --main-gold: #f1c40f; }
-        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Microsoft JhengHei', sans-serif; color: white; user-select: none; }
+        :root { --main-blue: #0033ad; --main-gold: #f1c40f; --ice: #00ffff; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Microsoft JhengHei', sans-serif; color: white; user-select: none; touch-action: none; }
+        
+        /* 橫屏提示 */
         @media screen and (orientation: portrait) { #portrait-hint { display: flex; } }
-        #portrait-hint { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; justify-content: center; align-items: center; }
+        #portrait-hint { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: none; justify-content: center; align-items: center; text-align: center; }
+
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 100; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); }
-        .box { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 20px; border: 2px solid var(--main-gold); text-align: center; width: 400px; }
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; }
-        button, select, input { padding: 12px; border-radius: 8px; border: none; font-weight: bold; margin: 5px 0; font-size: 14px; }
-        button { cursor: pointer; background: var(--main-blue); color: white; transition: 0.2s; }
-        button:active { transform: scale(0.9); }
+        .box { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 20px; border: 2px solid var(--main-gold); text-align: center; width: 420px; }
+        
+        button { cursor: pointer; background: var(--main-blue); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; transition: 0.2s; font-size: 16px; margin: 5px; }
+        button:active { transform: scale(0.9); background: var(--main-gold); color: black; }
+
+        /* 遊戲 UI */
         #game-ui { position: fixed; top: 10px; left: 10px; right: 10px; display: none; z-index: 50; }
-        .bar-bg { width: 100%; height: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
-        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); }
-        #freeze-ui { position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; color: #00ffff; text-shadow: 0 0 15px #fff; display: none; z-index: 80; }
-        #dev-panel { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.6); padding: 10px; border-radius: 8px; display: none; z-index: 1000; font-size: 12px; }
-        #dev-panel input { width: 60px; background: white; color: black; padding: 4px; }
+        .bar-bg { width: 100%; height: 14px; background: rgba(255,255,255,0.2); border-radius: 7px; overflow: hidden; border: 1px solid #fff; }
+        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); transition: width 0.3s; }
+        
+        /* 冰凍與問答 */
+        #freeze-ui { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); font-size: 60px; color: var(--ice); text-shadow: 0 0 20px #fff; display: none; z-index: 80; font-weight: 900; }
+        #quiz-overlay { display: none; flex-direction: column; }
+        .quiz-btn { width: 100%; margin: 10px 0; font-size: 18px; }
+
+        #dev-panel { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.6); padding: 8px; border-radius: 8px; display: none; z-index: 1000; font-size: 12px; }
+        #dev-panel input { width: 50px; }
     </style>
 </head>
 <body>
-    <div id="portrait-hint"><h1>請旋轉螢幕以橫屏遊玩</h1></div>
+    <div id="portrait-hint"><div><h1>請旋轉螢幕</h1><p>並建議「新增至主螢幕」以鎖定橫屏</p></div></div>
 
     <div id="loading-screen" class="overlay">
         <div class="box">
-            <h3>正在讀取東水校徽...</h3>
+            <h3 id="load-msg">正在初始化電子系統...</h3>
             <div class="bar-bg"><div id="load-fill" style="width:0%; height:100%; background:var(--main-gold);"></div></div>
         </div>
     </div>
 
     <div id="auth-screen" class="overlay" style="display:none;">
         <div class="box">
-            <h2 style="color:var(--main-gold);">逃離東水</h2>
+            <h2 style="color:var(--main-gold); margin-bottom:20px;">逃離東水</h2>
             <div id="auth-main">
-                <button onclick="auth('guest')">訪客登入</button>
-                <button onclick="showForm('dev')" style="opacity:0.5; font-size:10px;">開發者登入</button>
+                <button onclick="auth()" style="width:200px;">開始遊戲</button><br>
+                <button onclick="showDev()" style="opacity:0.3; font-size:10px; margin-top:20px;">開發者入口</button>
             </div>
-            <div id="auth-form" style="display:none;">
-                <input type="password" id="dev-pw" placeholder="請輸入開發者密碼">
-                <button onclick="checkDev()" style="background:var(--main-gold); color:black;">驗證</button>
+            <div id="auth-dev" style="display:none;">
+                <input type="password" id="dev-pw" placeholder="密碼">
+                <button onclick="verifyDev()">確認</button>
             </div>
         </div>
     </div>
 
     <div id="level-screen" class="overlay" style="display:none;">
-        <div class="box" style="width: 80%;">
-            <h3>選擇科別</h3>
-            <div class="menu-grid">
+        <div class="box" style="width: 80%; max-width: 600px;">
+            <h3>選擇專業科別</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
                 <button onclick="setDept('電子')">電子</button><button onclick="setDept('輪機')">輪機</button><button onclick="setDept('食品')">食品</button>
                 <button onclick="setDept('養殖')">養殖</button><button onclick="setDept('家政')">家政</button><button onclick="setDept('航管')">航管</button>
             </div>
-            <div id="game-sets" style="display:none; margin-top:15px; border-top:1px solid #777; padding-top:10px;">
-                年級：<select id="grade-sel"><option value="1">高一</option><option value="2">高二</option><option value="3">高三</option></select>
-                難度：<select id="diff-sel"><option value="easy">簡單</option><option value="normal">普通</option><option value="hard">困難</option><option value="extreme">極限</option></select>
-                <button onclick="start()" style="background:var(--main-gold); color:black;">開始逃離</button>
+            <div id="start-ctrl" style="display:none; margin-top:15px; border-top:1px solid #555; padding-top:10px;">
+                難度：<select id="diff-sel" style="padding:8px;"><option value="easy">輕鬆(高一)</option><option value="normal">普通(高二)</option><option value="hard">困難(高三)</option></select>
+                <button onclick="launchGame()" style="background:var(--main-gold); color:black; margin-left:15px;">立即出發</button>
             </div>
+        </div>
+    </div>
+
+    <div id="quiz-screen" class="overlay" style="display:none;">
+        <div class="box" id="quiz-overlay">
+            <h2 id="quiz-q">題目加載中...</h2>
+            <button class="quiz-btn" onclick="answer(true)">正確 (True / 1)</button>
+            <button class="quiz-btn" onclick="answer(false)">錯誤 (False / 0)</button>
         </div>
     </div>
 
     <div id="game-ui">
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold;">
-            <span id="hp-display">❤️❤️❤️</span>
-            <span id="dist-display">0m / 3000m</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span id="hp-ui">❤️❤️❤️</span>
+            <span id="dist-ui">0m / 3000m</span>
         </div>
         <div class="bar-bg"><div id="progress-bar"></div></div>
     </div>
 
-    <div id="freeze-ui">0.20s</div>
-    <div id="dev-panel">
-        距離: <input type="number" id="d-dist"> | 
-        心: <input type="number" id="d-hp">
-    </div>
+    <div id="freeze-ui">0.00s</div>
+    <div id="dev-panel">Dist: <input type="number" id="d-dist"> HP: <input type="number" id="d-hp"></div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script src="game.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js');
-        }
-    </script>
 </body>
 </html>
