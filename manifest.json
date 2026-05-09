@@ -1,0 +1,16 @@
+{
+  "name": "歷史決戰：帝君對決大總統",
+  "short_name": "歷史決戰",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#2c3e50",
+  "theme_color": "#e74c3c",
+  "icons": [
+    {
+      "src": "main-menu.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}
