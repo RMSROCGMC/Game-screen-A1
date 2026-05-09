@@ -9,15 +9,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
         :root { --blue: #0033ad; --gold: #f1c40f; --ice: #00ffff; }
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #000; color: #fff; font-family: 'Microsoft JhengHei', sans-serif; overflow: hidden; touch-action: none; }
+        
         #rotate-hint { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         @media screen and (orientation: portrait) { #rotate-hint { display: flex; } }
+
         .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 100; }
-        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 80%; max-width: 400px; background: #111; }
+        .box { border: 2px solid var(--gold); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 400px; background: #111; }
+        
         button { background: var(--blue); color: #fff; border: none; padding: 12px 20px; margin: 8px; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
+        label { display: block; margin-top: 10px; font-weight: bold; color: var(--gold); }
+        select { padding: 10px; width: 100%; font-size: 16px; margin: 5px 0 15px 0; background: #222; color: #fff; border: 1px solid var(--gold); border-radius: 5px; }
+
         #game-ui { position: fixed; top: 10px; width: 94%; left: 3%; z-index: 50; display: none; }
         .bar-bg { width: 100%; height: 16px; background: #333; border: 1.5px solid #fff; border-radius: 8px; overflow: hidden; }
         #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #ff4500); }
+
         #quiz-box { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 200; }
         .quiz-content { background: #1a1a1a; border: 3px solid var(--gold); padding: 25px; border-radius: 20px; width: 80%; max-width: 500px; text-align: center; }
         #ans-zone { display: grid; gap: 10px; margin-top: 20px; }
@@ -25,17 +32,32 @@
     </style>
 </head>
 <body>
-    <div id="rotate-hint"><h2>🔄 請橫放手機</h2><p>或從桌面圖示啟動以強制橫屏</p></div>
+    <div id="rotate-hint"><h2>🔄 請旋轉手機</h2><p>安裝 PWA 後可自動鎖定橫屏</p></div>
+
     <div id="setup-screen" class="overlay">
         <div class="box">
-            <h2 style="color:var(--gold)">逃離東水</h2>
-            <select id="dept-sel" style="width:100%; padding:10px; margin:10px 0;">
+            <h2 style="color:var(--gold)">逃離東水 - 專業挑戰</h2>
+            <label>選擇年級：</label>
+            <select id="grade-sel">
+                <option value="1">高一</option><option value="2">高二</option><option value="3">高三</option>
+            </select>
+            <label>選擇科別：</label>
+            <select id="dept-sel">
                 <option value="電子">電子科</option><option value="輪機">輪機科</option>
                 <option value="食品">食品科</option><option value="家政">家政科</option>
             </select>
-            <button onclick="launchGame()" style="width:100%;">開始逃離 (並鎖定橫屏)</button>
+            <button onclick="launchGame()" style="width:100%; background:var(--gold); color:#000;">開始遊戲</button>
         </div>
     </div>
+
+    <div id="end-screen" class="overlay" style="display:none; z-index:500;">
+        <div class="box">
+            <h1 id="end-title"></h1>
+            <p id="end-msg"></p>
+            <button onclick="location.reload()" style="width:100%;">重新嘗試</button>
+        </div>
+    </div>
+
     <div id="quiz-box"><div class="quiz-content"><h2 id="q-txt"></h2><div id="ans-zone"></div></div></div>
     <div id="game-ui">
         <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span id="hp-txt">❤️❤️❤️</span><span id="dist-txt">0m / 3000m</span></div>
@@ -43,11 +65,12 @@
     </div>
     <div id="freeze-timer">0s</div>
     <canvas id="gameCanvas"></canvas>
+
     <script src="questions.js"></script>
     <script src="game.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log("PWA 就緒"));
+            navigator.serviceWorker.register('sw.js').then(() => console.log('PWA Ready'));
         }
     </script>
 </body>
