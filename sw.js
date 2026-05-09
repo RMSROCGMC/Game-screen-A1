@@ -1,7 +1,8 @@
-const CACHE_NAME = 'warrion-history-v1';
+const CACHE_NAME = 'warrior-history-v2'; // 每次更新檔案建議改一下版本號(v1變v2)
 const ASSETS_TO_CACHE = [
   'index.html',
-  'main-menu.png',
+  'game.js',
+  '1778345687994.png', // 確保這裡改成了你的實際圖檔名稱
   'manifest.json'
 ];
 
@@ -12,9 +13,4 @@ self.addEventListener('install', event => {
   );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-  );
-});
+// 其餘邏輯保持不變...
