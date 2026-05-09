@@ -3,14 +3,8 @@
   "short_name": "逃離東水",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "landscape",
   "background_color": "#000000",
   "theme_color": "#0033ad",
-  "icons": [
-    {
-      "src": "logo.jpeg",
-      "sizes": "512x512",
-      "type": "image/jpeg"
-    }
-  ]
+  "orientation": "landscape",
+  "icons": [{"src": "logo.jpeg", "sizes": "512x512", "type": "image/jpeg"}]
 }
