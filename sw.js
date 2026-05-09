@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tkms-v9';
+const CACHE_NAME = 'tkms-v11';
 const ASSETS = ['./', './index.html', './game.js', './questions.js', './manifest.json', './logo.jpeg'];
 self.addEventListener('install', (e) => {
     self.skipWaiting();
