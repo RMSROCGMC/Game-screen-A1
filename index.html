@@ -6,94 +6,124 @@
     <title>歷史決戰：帝君對決大總統</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: sans-serif; color: white; -webkit-touch-callout: none; user-select: none; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: sans-serif; color: white; user-select: none; }
         
         /* 加載畫面 */
         #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; }
-        #loading-bar-container { width: 60%; height: 20px; background: #333; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 2px solid #fff; }
+        #loading-bar-container { width: 60%; height: 15px; background: #333; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 1px solid #fff; }
         #loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #e74c3c, #f1c40f); transition: width 0.1s; }
         
-        /* 主選單畫面 */
-        #menu-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: flex-end; align-items: center; z-index: 9999; }
+        /* 登入與選單容器 */
+        #ui-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 9999; justify-content: center; align-items: center; }
         #menu-bg { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background-image: url('1778345687994.png'); /* 請確保 GitHub 檔名完全一致 */
+            background-image: url('1778345687994.png'); 
             background-size: contain; background-repeat: no-repeat; background-position: center; z-index: -1; 
         }
-        #btn-start { background-color: rgba(231, 76, 60, 0.9); color: white; border: 3px solid white; padding: 15px 50px; font-size: 24px; font-weight: bold; border-radius: 10px; cursor: pointer; margin-bottom: 10%; transition: transform 0.2s; -webkit-tap-highlight-color: transparent; }
-        #btn-start:active { transform: scale(0.95); }
+
+        /* 登入區塊 */
+        #auth-box { background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #f1c40f; text-align: center; width: 280px; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        .btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-primary { background: #e74c3c; color: white; }
+        .btn-guest { background: #7f8c8d; color: white; }
         
-        /* 遊戲畫布 */
+        /* 遊戲選單 */
+        #game-menu { display: none; text-align: center; }
+        #start-btn { background: #27ae60; color: white; padding: 15px 60px; font-size: 24px; border-radius: 10px; border: 3px solid white; }
+
         canvas { display: block; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <p style="font-size: 24px; font-weight: bold;">資源加載中...</p>
-        <div id="loading-bar-container">
-            <div id="loading-bar"></div>
-        </div>
-        <p><span id="percent">0%</span></p>
+        <p>資源加載中...</p>
+        <div id="loading-bar-container"><div id="loading-bar"></div></div>
+        <p id="percent">0%</p>
     </div>
 
-    <div id="menu-screen">
+    <div id="ui-container">
         <div id="menu-bg"></div>
-        <button id="btn-start">開始對決</button>
+
+        <div id="auth-box">
+            <h3>歷史決戰 - 本機登入</h3>
+            <input type="text" id="username" placeholder="帳號">
+            <input type="password" id="password" placeholder="密碼">
+            <button class="btn btn-primary" onclick="handleAuth('login')">登入 / 註冊</button>
+            <button class="btn btn-guest" onclick="handleAuth('guest')">訪客模式</button>
+            <p id="auth-msg" style="font-size: 12px; color: #f1c40f;"></p>
+        </div>
+
+        <div id="game-menu">
+            <p id="welcome-txt" style="font-size: 20px; text-shadow: 2px 2px #000;"></p>
+            <button id="start-btn" onclick="pressStart()">開始對決</button>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script src="game.js"></script>
-
     <script>
-        const loadingScreen = document.getElementById('loading-screen');
         const loadingBar = document.getElementById('loading-bar');
         const percentText = document.getElementById('percent');
-        const menuScreen = document.getElementById('menu-screen');
-        const btnStart = document.getElementById('btn-start');
-        
-        // 模擬加載
-        let progress = 0;
-        const timer = setInterval(() => {
-            progress += Math.random() * 10;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(timer);
-                percentText.innerText = '完成！';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    menuScreen.style.display = 'flex';
-                }, 500);
-            }
-            loadingBar.style.width = progress + '%';
-            percentText.innerText = Math.floor(progress) + '%';
-        }, 100);
+        const uiContainer = document.getElementById('ui-container');
+        const authBox = document.getElementById('auth-box');
+        const gameMenu = document.getElementById('game-menu');
 
-        // 點擊開始
-        btnStart.addEventListener('click', () => {
-            // 請求全螢幕
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(e => console.log("全螢幕受阻"));
+        // 加載動畫
+        let prog = 0;
+        const loadTimer = setInterval(() => {
+            prog += 5;
+            loadingBar.style.width = prog + '%';
+            percentText.innerText = prog + '%';
+            if (prog >= 100) {
+                clearInterval(loadTimer);
+                document.getElementById('loading-screen').style.display = 'none';
+                uiContainer.style.display = 'flex';
             }
-            // 嘗試鎖定橫屏
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(e => console.log("鎖定橫屏受阻"));
+        }, 50);
+
+        // 本機帳號邏輯
+        function handleAuth(type) {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('auth-msg');
+
+            if (type === 'guest') {
+                enterMenu("訪客勇士");
+                return;
             }
 
-            menuScreen.style.display = 'none';
-            
-            // 執行 game.js 裡的啟動函數
-            if (typeof startGame === "function") {
-                startGame();
+            if (!user || !pass) {
+                msg.innerText = "請輸入帳號密碼";
+                return;
+            }
+
+            const savedPass = localStorage.getItem(`user_${user}`);
+            if (savedPass) {
+                if (savedPass === pass) enterMenu(user);
+                else msg.innerText = "密碼錯誤";
             } else {
-                alert("錯誤：game.js 尚未讀取成功");
+                localStorage.setItem(`user_${user}`, pass);
+                msg.innerText = "註冊成功並登入";
+                enterMenu(user);
             }
-        });
+        }
 
-        // 註冊 SW
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        function enterMenu(name) {
+            authBox.style.display = 'none';
+            gameMenu.style.display = 'block';
+            document.getElementById('welcome-txt').innerText = `歡迎, ${name}`;
+        }
+
+        function pressStart() {
+            // 請求橫屏與全屏
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+            
+            uiContainer.style.display = 'none';
+            if (typeof startGame === "function") startGame();
         }
     </script>
 </body>
