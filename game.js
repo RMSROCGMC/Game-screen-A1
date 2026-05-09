@@ -1,166 +1,149 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let gameActive = false;
-let authMode = ''; 
-let isDev = false;
+// --- 資源預載 ---
+const logoImg = new Image();
+logoImg.crossOrigin = "anonymous";
+// 直接使用你提供的 Wiki 校徽網址
+logoImg.src = "https://upload.wikimedia.org/wikipedia/commons/e/e5/National_Marine_Fisheries_Donggang_advanced_vocational_school.JPG";
 
-// --- 動態物件 ---
-let clouds = [];
-let birds = [];
-for(let i=0; i<5; i++) clouds.push({x: Math.random()*2000, y: 50+Math.random()*100, s: 0.5+Math.random()});
-for(let i=0; i<3; i++) birds.push({x: Math.random()*2000, y: 100+Math.random()*50, s: 2+Math.random()});
-
-let gameState = {
-    distance: 0, targetDist: 3000, hp: 3, 
-    dept: '', grade: 1, diff: 'easy',
-    heroY: 0, chaseX: -200, 
-    freezeTimer: 0, lastQuizDist: 0,
-    legAngle: 0 // 用於跑步動畫
+let logoLoaded = false;
+logoImg.onload = () => { 
+    logoLoaded = true; 
+    setTimeout(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+    }, 1000);
 };
 
-// --- 登入邏輯 ---
-function showLogin(mode) {
-    authMode = mode;
-    document.getElementById('login-options').style.display = 'none';
-    document.getElementById('auth-form').style.display = 'block';
-    if(mode === 'guest') handleAuth(); // 訪客直接進
-}
+// 模擬進度條
+let lpb = 0;
+const lt = setInterval(() => {
+    lpb += 5; document.getElementById('load-bar').style.width = lpb + "%";
+    if(lpb >= 100) clearInterval(lt);
+}, 50);
 
-function handleAuth() {
-    const user = document.getElementById('user-in').value;
-    const pass = document.getElementById('pass-in').value;
+// --- 遊戲狀態 ---
+let gameActive = false;
+let isDev = false;
+let isPaused = false;
+let clouds = [], birds = [];
+let state = { dist: 0, target: 3000, hp: 3, dept: '', grade: 1, diff: 'easy', chaseX: -200, freeze: 0, leg: 0 };
 
-    if(authMode === 'dev') {
-        if(pass === '410205x') {
-            isDev = true;
-            document.getElementById('dev-panel').style.display = 'block';
-            enterLevelSelect();
-        } else alert("密碼錯誤");
-    } else {
-        enterLevelSelect();
-    }
-}
+// --- 登入控制 ---
+let curMode = '';
+function showForm(m) { curMode = m; document.getElementById('auth-main').style.display='none'; document.getElementById('auth-form').style.display='block'; }
+function auth(m) { curMode = m; submitAuth(); }
 
-function enterLevelSelect() {
+function submitAuth() {
+    const u = document.getElementById('uid').value;
+    const p = document.getElementById('upw').value;
+    if(curMode === 'dev' && p === '410205x') { isDev = true; document.getElementById('dev-console').style.display='block'; }
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('level-screen').style.display = 'flex';
 }
 
-function selectDept(dept) {
-    gameState.dept = dept;
-    document.getElementById('sub-setting').style.display = 'block';
-}
+function sel(d) { state.dept = d; document.getElementById('difficulty-box').style.display='block'; }
 
-function startGame() {
-    gameState.grade = document.getElementById('sel-grade').value;
-    gameState.diff = document.getElementById('sel-diff').value;
+function launch() {
+    state.grade = document.getElementById('grade').value;
+    state.diff = document.getElementById('diff').value;
+    if(state.diff === 'extreme' && state.grade < 2 && !isDev) return alert("高二以上才可開啟極限！");
     
-    if(gameState.diff === 'extreme' && gameState.grade < 2 && !isDev) {
-        alert("極限模式僅限高二以上開啟！"); return;
-    }
-
-    document.getElementById('level-screen').style.display = 'none';
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    document.getElementById('level-screen').style.display='none';
+    document.getElementById('game-ui').style.display='block';
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    
+    // 初始化環境
+    for(let i=0; i<6; i++) clouds.push({x: Math.random()*canvas.width, y: Math.random()*150, s: 0.5+Math.random()});
     gameActive = true;
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
 }
 
-// --- 繪圖功能 ---
-function drawSun(ratio) {
-    let y = 100 + ratio * 400; // 太陽下山
-    ctx.fillStyle = ratio > 0.6 ? "#ff4500" : "#fff700";
-    ctx.beginPath(); ctx.arc(canvas.width - 100, y, 40, 0, Math.PI*2); ctx.fill();
-}
-
-function drawHero(x, y, isFrozen) {
-    ctx.save();
-    ctx.translate(x, y);
-
-    if(isFrozen) {
-        // 冰凍特效 (藍色透明覆蓋)
-        ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
-        ctx.fillRect(-25, -65, 50, 75);
-        ctx.strokeStyle = "#fff";
-        ctx.strokeRect(-25, -65, 50, 75);
-    } else {
-        // 跑步動畫
-        gameState.legAngle += 0.2;
-        let leftLeg = Math.sin(gameState.legAngle) * 15;
-        ctx.fillStyle = "#0033ad";
-        ctx.fillRect(-10, 0, 8, 15 + leftLeg); // 左腳
-        ctx.fillRect(2, 0, 8, 15 - leftLeg);  // 右腳
-    }
-
-    // 身體
-    ctx.fillStyle = "#fff"; ctx.fillRect(-20, -50, 40, 50);
-    ctx.fillStyle = "#ffdbac"; ctx.beginPath(); ctx.arc(0, -65, 15, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-}
-
+// --- 核心循環 ---
 function update() {
-    if(!gameActive) return;
+    if(!gameActive || isPaused) return;
 
-    // 開發者面板實時更新
-    if(isDev) {
-        document.getElementById('dev-dist').value = Math.floor(gameState.distance);
-        document.getElementById('dev-hp').value = gameState.hp;
-    }
-
-    if(gameState.freezeTimer > 0) {
-        gameState.freezeTimer--;
-        document.getElementById('freeze-ui').style.display = 'block';
-        document.getElementById('freeze-ui').innerText = (gameState.freezeTimer/60).toFixed(2) + "s";
-        gameState.chaseX += 2.5; // 凍住時校徽追更快
+    if(state.freeze > 0) {
+        state.freeze--;
+        document.getElementById('freeze-timer').style.display = 'block';
+        document.getElementById('freeze-timer').innerText = (state.freeze/60).toFixed(2) + "s";
+        state.chaseX += 3; // 冰凍時校徽逼近變快
     } else {
-        document.getElementById('freeze-ui').style.display = 'none';
-        gameState.distance += 1;
-        gameState.chaseX += 1.8;
+        document.getElementById('freeze-timer').style.display = 'none';
+        state.dist += 1;
+        state.chaseX += 1.8;
+        state.leg += 0.2;
     }
 
-    // 雲朵與鳥移動
-    clouds.forEach(c => { c.x -= c.s; if(c.x < -200) c.x = canvas.width + 200; });
-    birds.forEach(b => { b.x += b.s; if(b.x > canvas.width + 200) b.x = -200; });
+    if(isDev) {
+        state.dist = parseInt(document.getElementById('d-dist').value) || state.dist;
+        state.hp = parseInt(document.getElementById('d-hp').value) || state.hp;
+    }
+
+    // 碰撞檢查
+    if(state.chaseX > 250) {
+        state.hp--; state.chaseX = -300;
+        if(state.hp <= 0) { alert("你被抓到了！"); location.reload(); }
+    }
+
+    // 問答觸發 (每 20m)
+    if(state.dist % 20 === 0 && state.dist > 0) triggerQuiz();
+}
+
+function triggerQuiz() {
+    isPaused = true;
+    const ans = confirm("【專業科目挑戰】\n1+1=2 嗎？(模擬題目，點確定正確，取消錯誤)");
+    if(!ans) state.freeze = 120; // 凍結 2 秒
+    isPaused = false;
 }
 
 function draw() {
-    let ratio = gameState.distance / 3000;
-    ctx.fillStyle = updateSky(); // 使用之前定義的漸變
+    // 天空背景 (隨距離變晚)
+    let r = 135 - (state.dist/3000)*100, g = 206 - (state.dist/3000)*150, b = 235 - (state.dist/3000)*150;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    drawSun(ratio);
-
-    // 畫雲
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    // 雲朵
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
     clouds.forEach(c => {
-        ctx.beginPath(); ctx.arc(c.x, c.y, 20*c.s, 0, Math.PI*2); 
-        ctx.arc(c.x+20, c.y-10, 25*c.s, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(c.x, c.y, 30*c.s, 0, Math.PI*2); ctx.fill();
+        c.x -= c.s; if(c.x < -100) c.x = canvas.width + 100;
     });
 
-    // 畫鳥 (簡單 V 型)
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-    birds.forEach(b => {
-        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x+10, b.y+10); ctx.lineTo(b.x+20, b.y); ctx.stroke();
-    });
+    // 地板
+    ctx.fillStyle = "#333"; ctx.fillRect(0, canvas.height-100, canvas.width, 100);
 
-    // 畫地板
-    ctx.fillStyle = "#222"; ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+    // 英雄 (繪製跑步動作)
+    ctx.save();
+    ctx.translate(300, canvas.height-100);
+    if(state.freeze > 0) {
+        ctx.fillStyle = "rgba(0,255,255,0.5)"; ctx.fillRect(-25, -80, 50, 80); // 冰塊
+    }
+    ctx.fillStyle = "#fff"; ctx.fillRect(-15, -60, 30, 40); // 身體
+    ctx.fillStyle = "#ffdbac"; ctx.beginPath(); ctx.arc(0, -75, 12, 0, Math.PI*2); ctx.fill(); // 頭
+    // 腿部動畫
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 6;
+    let l1 = Math.sin(state.leg)*15, l2 = Math.sin(state.leg + Math.PI)*15;
+    ctx.beginPath(); ctx.moveTo(-5, -20); ctx.lineTo(-5 + l1, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -20); ctx.lineTo(5 + l2, 0); ctx.stroke();
+    ctx.restore();
 
-    drawHero(300, canvas.height - 100, gameState.freezeTimer > 0);
-    
-    // 畫追趕校徽 (定義在之前的函數)
-    drawLogo(gameState.chaseX, canvas.height - 130, 70);
+    // 畫校徽原圖
+    if(logoLoaded) {
+        ctx.save();
+        ctx.translate(state.chaseX, canvas.height - 150);
+        ctx.shadowBlur = 20; ctx.shadowColor = "red";
+        // 將原圖畫成圓形
+        ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI*2); ctx.clip();
+        ctx.drawImage(logoImg, -60, -60, 120, 120);
+        ctx.restore();
+    }
+
+    // 更新 UI
+    document.getElementById('dist-txt').innerText = `${Math.floor(state.dist)}m / ${state.target}m`;
+    document.getElementById('progress-bar').style.width = (state.dist/state.target*100) + "%";
+    document.getElementById('hp-box').innerText = "❤️".repeat(state.hp);
 }
 
-function gameLoop() {
-    update(); draw();
-    if(gameActive) requestAnimationFrame(gameLoop);
-}
-
-function updateSky() {
-    let r = 135 - (gameState.distance/3000)*100;
-    let g = 206 - (gameState.distance/3000)*150;
-    let b = 235 - (gameState.distance/3000)*150;
-    return `rgb(${r},${g},${b})`;
-}
+function loop() { update(); draw(); if(gameActive) requestAnimationFrame(loop); }
