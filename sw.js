@@ -1,13 +1,9 @@
-const CACHE_NAME = 'tkms-v3';
-const ASSETS = ['./', './index.html', './game.js', './manifest.json', './logo.jpeg'];
+const CACHE_NAME = 'tkms-v5';
+const ASSETS = ['./', './index.html', './game.js', './questions.js', './manifest.json', './logo.jpeg'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k)))));
 });
 
 self.addEventListener('fetch', (e) => {
